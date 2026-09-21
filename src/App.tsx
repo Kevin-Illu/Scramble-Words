@@ -1,6 +1,6 @@
 import "./index.css";
 import { useEffect, useState } from "react";
-import { gameLevels, type LevelData, type WordItem } from "./GameLogic";
+import { gameLevels, type LevelData } from "./GameLogic";
 
 const LEVEL_STATUS = {
   playing: "PLAYING",
@@ -8,49 +8,116 @@ const LEVEL_STATUS = {
   failed: "FAILED"
 } as const;
 
+const PASSING_THRESHOLD = 70
+
 type LevelStatus = typeof LEVEL_STATUS[keyof typeof LEVEL_STATUS];
 
 function getLevel(levelNum: number, levels: LevelData[]): LevelData {
   return levels[levelNum - 1]!;
 }
 
+function makeScrambleLettersObjs(scrambleWord: string): { id: number, letter: string, used: boolean }[] {
+  return scrambleWord.split("").reduce((p: any[], c, index) => {
+    p.push({
+      id: index,
+      letter: c,
+      used: false
+    })
+    return p
+  }, [])
+}
+
 export function App() {
   const [currentLevelNum, setCurrentLevelNum] = useState(1);
   const [levelStatus, setLevelStatus] = useState<LevelStatus>(LEVEL_STATUS.playing);
   const [currentLevel, setCurrentLevel] = useState<LevelData>(getLevel(currentLevelNum, gameLevels));
+  const [progress, setProgress] = useState(0)
+  const [scrambleLetters, setScrambleLetters] = useState(makeScrambleLettersObjs(currentLevel.pool))
 
 
   const [currentWord, setCurrentWord] = useState("")
 
   const removeLastLetter = () => {
+    const lastLetter = currentWord[currentWord.length - 1] ?? ""
+    const scrambleLetter = scrambleLetters.filter(w => w.letter === lastLetter && w.used)[0]!
+
+    setScrambleLetters((prev) => prev.map(l => ({
+      ...l,
+      used: l.id === scrambleLetter.id ? false : l.used
+    })))
+
     setCurrentWord(currentWord.slice(0, -1))
   }
 
+  const addLetter = (letter: string, id) => {
+    setScrambleLetters((prev) => prev.map(l => ({
+      ...l,
+      used: l.id === id ? true : l.used
+    })))
+
+    setCurrentWord(prev => prev += letter)
+  }
+
   const handleWordFound = () => {
-    const guessedWord = currentWord
-    const isWordFounded = !!currentLevel?.words.find(i => i.word === guessedWord.toUpperCase())
+    const guessedWord = currentWord.toUpperCase()
+
+    const wordExists = currentLevel?.words.some(w => w.word === guessedWord)
+    if (!wordExists) return
+
     setCurrentLevel(lvl => ({
       ...lvl,
-      words: lvl.words.map((i) => ({ ...i, tached: i.word === guessedWord ? isWordFounded : false }))
+      words: lvl.words.map(word =>
+        word.word === guessedWord
+          ? { ...word, tached: true }
+          : word
+      )
     }))
+
+    setScrambleLetters(prev => prev.map((letter) => ({...letter, used: false })))
+
+    // throw the confetti
+    setCurrentWord("")
+  }
+
+  const checkIfPassed = (levelData: LevelData) => {
+    const progress = calculateLevelProgress(levelData); // From the previous calculation
+    return progress >= PASSING_THRESHOLD;
   };
 
-  // useEffect(() => {
-  //   console.log({ levelStatus, currentLevel, currentLevelNum });
-  // }, [levelStatus, currentLevel, currentLevelNum]);
-  //
+  const calculateLevelProgress = (levelData: LevelData) => {
+    const totalWords = levelData.words.length;
+    const foundWords = levelData.words.filter(word => word.tached).length;
+
+    if (totalWords === 0) return 0;
+
+    return Math.round((foundWords / totalWords) * 100);
+  };
+
+
+  useEffect(() => {
+    const progress = calculateLevelProgress(currentLevel);
+    setProgress(progress)
+
+    if (progress >= PASSING_THRESHOLD && levelStatus === LEVEL_STATUS.playing) {
+      setLevelStatus(LEVEL_STATUS.passed)
+      // stopTimer();
+      // playSuccessSound();
+    }
+  }, [currentLevel]);
+
+
   return (
-    <div className="w-screen h-screen p-16">
+    <div className="w-screen h-screen p-16 text-xl">
       <div className="flex gap-4">
-      <p>
-        {levelStatus}
-      </p>
-      <p>
-      Level: {currentLevelNum}
-      </p>
+        <p>
+          {levelStatus} {progress}%
+        </p>
+        <p>
+          Level: {currentLevelNum}
+        </p>
       </div>
       <div className="w-full h-full p-6 flex justify-center items-center">
-        <div className="grid grid-flow-col grid-rows-3 gap-4 w-[80%] h-[80%]">
+        <div className="grid grid-flow-col grid-rows-3 gap-4 w-[80%] h-[80%] place-items-center">
           {currentLevel?.words.map((props, key) => (
             <DashedWord key={key} {...props} />
           ))}
@@ -58,21 +125,29 @@ export function App() {
         <div className="w-full h-full flex justify-center items-center gap-4">
 
           <div className="flex flex-col justify-center items-center gap-4">
-            <div>
-              {currentWord}
+            <div className="flex flex-col justify-center items-center gap-4">
+
+              <div className="text-6xl px-6 py-20 text-center">
+                <p className="h-[30px] w-fit">
+                  {currentWord}
+                </p>
+              </div>
 
               <div className="flex gap-4">
-
-                <button onClick={handleWordFound}>Check</button>
-
-                <button onClick={removeLastLetter}>Delete</button>
+                <button onClick={handleWordFound} disabled={currentWord === ""}>ENTER</button>
+                <button onClick={removeLastLetter} disabled={currentWord === ""}>REMOVE</button>
+                <button>SCRAMBLE</button>
               </div>
             </div>
             <div className="gap-4 h-[200px] w-[400px] flex justify-center items-center">
-              {currentLevel?.pool.split("").map((letter: string, key: number) => (
-                <button key={key} onClick={() => setCurrentWord((w) => w.concat(letter))}>
-                  <p className="h-[20px] w-fit">{letter}</p>
-                </button>
+              {scrambleLetters?.map(({ letter, used, id }, key: number) => (
+                <div key={key}>
+                  {!used ? (
+                    <button key={key} onClick={() => addLetter(letter, id)}>
+                      <p className="h-[20px] w-fit">{letter}</p>
+                    </button>
+                  ) : <></>}
+                </div>
               ))}
             </div>
           </div>
@@ -86,7 +161,7 @@ export function App() {
 const DashedWord = ({ word, tached }) => {
   const wordToRender = tached ? word : word.split("").map(() => "_ ").join("")
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 h-[30px]">
       <p>{wordToRender}</p>
     </div>
   )
