@@ -7,11 +7,13 @@ export interface LevelData {
   level: number;
   pool: string;
   words: WordItem[];
+  complete: boolean;
 }
 
 export const gameLevels: LevelData[] = [
   {
     level: 1,
+    complete: false,
     pool: "L M W O L E",
     words: [
       // Length 3
@@ -34,6 +36,7 @@ export const gameLevels: LevelData[] = [
   },
   {
     level: 2,
+    complete: false,
     pool: "H S G F T I",
     words: [
       // Length 3
@@ -66,6 +69,7 @@ export const gameLevels: LevelData[] = [
   },
   {
     level: 3,
+    complete: false,
     pool: "E M I S S L",
     words: [
       // Length 3
@@ -100,6 +104,7 @@ export const gameLevels: LevelData[] = [
   },
   {
     level: 4,
+    complete: false,
     pool: "R A N Y C O",
     words: [
       // Length 3
@@ -136,6 +141,7 @@ export const gameLevels: LevelData[] = [
   },
   {
     level: 5,
+    complete: false,
     pool: "G A E D R G",
     words: [
       // Length 3

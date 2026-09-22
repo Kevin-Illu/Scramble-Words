@@ -1,6 +1,7 @@
 import "./index.css";
 import { useEffect, useState } from "react";
 import { gameLevels, type LevelData, type WordItem } from "./GameLogic";
+import { useGameTimer } from "./useGameTimer";
 
 const LEVEL_STATUS = {
   playing: "PLAYING",
@@ -8,7 +9,8 @@ const LEVEL_STATUS = {
   failed: "FAILED"
 } as const;
 
-const PASSING_THRESHOLD = 70
+const PASSING_THRESHOLD = 10
+const TIMER = 20 // 180
 
 type LevelStatus = typeof LEVEL_STATUS[keyof typeof LEVEL_STATUS];
 
@@ -69,15 +71,43 @@ function scramblePool(poolString: string): string {
 };
 
 export function App() {
-  const [currentLevelNum, setCurrentLevelNum] = useState(1);
+  const [currentLevelNum, setCurrentLevelNum] = useState(2);
   const [levelStatus, setLevelStatus] = useState<LevelStatus>(LEVEL_STATUS.playing);
   const [currentLevel, setCurrentLevel] = useState<LevelData>(getLevel(currentLevelNum, gameLevels));
   const [progress, setProgress] = useState(0)
+  
+  const [showStatus, setShowStatus] = useState(false)
+
+  const getStatus = () => {
+    if (levelStatus === LEVEL_STATUS.passed) return "YOU WIN";
+
+    return "YOU LOSE"!
+  }
+
+
   const [{ currentPool, poolObj }, setScramblePool] = useState({
     currentPool: currentLevel.pool,
     poolObj: makeScramblePoolObjs(currentLevel.pool)
   })
   const [currentWord, setCurrentWord] = useState("")
+  const handleTimeUp = () => {
+    completeCurrentLevel()
+
+    if (checkIfPassed(currentLevel)) {
+      setLevelStatus(LEVEL_STATUS.failed)
+    }
+
+    setShowStatus(true)
+  };
+
+  const { formattedTime, startTimer, pauseTimer, resetTimer, isRunning, timeLeft } = useGameTimer(TIMER, handleTimeUp)
+
+  const completeCurrentLevel = () => {
+    setCurrentLevel(level => ({
+      ...level,
+      complete: true
+    }))
+  }
 
   const handleRemoveLastLetter = () => {
     const lastLetter = currentWord[currentWord.length - 1] ?? ""
@@ -106,9 +136,15 @@ export function App() {
     setCurrentWord(prev => prev += letter)
   }
 
-  const handleScramblePool = () => {
+  const handleScramblePool = (restore: boolean = false) => {
     const newPool = scramblePool(currentPool)
-    const newPoolObj = makeScramblePoolObjs(newPool, poolObj)
+    let newPoolObj;
+
+    if (!restore) {
+      newPoolObj = makeScramblePoolObjs(newPool, poolObj)
+    } else {
+      newPoolObj = makeScramblePoolObjs(newPool)
+    }
 
     setScramblePool(() => ({
       currentPool: newPool,
@@ -117,15 +153,14 @@ export function App() {
   }
 
   const handleWordFound = () => {
-    const guessedWord = currentWord.toUpperCase()
+    const guessedWord = currentWord.toUpperCase();
 
     // chekcing if the word is wgrong
-    const wordExists = currentLevel?.words.some(w => w.word === guessedWord)
+    const wordExists = currentLevel?.words.some(w => w.word === guessedWord);
     if (!wordExists) {
-      console.log("is not a valid word")
+      console.log("is not a valid word");
       return;
     }
-
 
     // checking if the word exist already
     const wordAlreadyExists = currentLevel.words.some(w => w.word === guessedWord && w.tached)
@@ -169,16 +204,38 @@ export function App() {
     return Math.round((foundWords / totalWords) * 100);
   };
 
+  const resetAll = () => {
+    resetTimer();
+    setCurrentLevel(getLevel(currentLevelNum, gameLevels));
+    setCurrentWord("")
+    handleScramblePool(true);
+    setLevelStatus(LEVEL_STATUS.playing)
+    startTimer();
+  }
 
+  // Stop timer and change the level state to complete
+  useEffect(() => {
+    if (isRunning && progress === 100) {
+      pauseTimer()
+      setCurrentLevel((prev) => ({
+        ...prev,
+        complete: true,
+      }))
+    }
+  }, [timeLeft])
+
+
+  // it changes whenever the user assert a word
+  // correclty so we can see the progress right on the screen
   useEffect(() => {
     const progress = calculateLevelProgress(currentLevel);
     setProgress(progress)
 
-    if (progress >= PASSING_THRESHOLD && levelStatus === LEVEL_STATUS.playing) {
+    if (progress >= PASSING_THRESHOLD) {
       setLevelStatus(LEVEL_STATUS.passed)
-      // stopTimer();
-      // playSuccessSound();
     }
+
+    // it should execute when the user assert a word
   }, [currentLevel]);
 
 
@@ -186,11 +243,30 @@ export function App() {
     <div className="w-screen h-screen p-16 text-xl">
       <div className="flex gap-4">
         <p>
-          {levelStatus} {progress}%
+          {levelStatus === LEVEL_STATUS.playing ? LEVEL_STATUS.failed : levelStatus} {progress}%
         </p>
         <p>
           Level: {currentLevelNum}
         </p>
+        <div className="timer-display">
+          <span>Time: {formattedTime}</span>
+        </div>
+        <div>
+          <button onClick={() => { resetAll() }}>PLAY</button>
+        </div>
+        <div>
+          {isRunning ? (
+            <button onClick={() => pauseTimer()}>PAUSE</button>
+          ) : (
+            <button onClick={() => startTimer()}>CONTINUE</button>
+          )}
+        </div>
+
+        <div>
+          <div>
+            <p>{ showStatus ? getStatus(): ""}</p>
+          </div>
+        </div>
       </div>
       <div className="w-full h-full p-6 flex justify-center items-center">
         <div className="grid grid-flow-col grid-rows-3 gap-4 w-[80%] h-[80%] place-items-center">
@@ -210,16 +286,16 @@ export function App() {
               </div>
 
               <div className="flex gap-4">
-                <button onClick={handleWordFound} disabled={currentWord === ""}>ENTER</button>
-                <button onClick={handleRemoveLastLetter} disabled={currentWord === ""}>REMOVE</button>
-                <button onClick={handleScramblePool}>SCRAMBLE</button>
+                <button onClick={handleWordFound} disabled={!isRunning || currentWord === ""}>ENTER</button>
+                <button onClick={handleRemoveLastLetter} disabled={!isRunning || currentWord === ""}>REMOVE</button>
+                <button onClick={() => handleScramblePool(false)} disabled={!isRunning}>SCRAMBLE</button>
               </div>
             </div>
             <div className="gap-4 h-[200px] w-[400px] flex justify-center items-center">
               {poolObj?.map(({ letter, used, id }, key: number) => (
                 <div key={key}>
                   {!used ? (
-                    <button key={key} onClick={() => addLetter(letter, id)}>
+                    <button key={key} onClick={() => addLetter(letter, id)} disabled={!isRunning}>
                       <p className="h-[20px] w-fit">{letter}</p>
                     </button>
                   ) : <></>}
