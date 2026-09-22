@@ -1,6 +1,6 @@
 import "./index.css";
 import { useEffect, useState } from "react";
-import { gameLevels, type LevelData } from "./GameLogic";
+import { gameLevels, type LevelData, type WordItem } from "./GameLogic";
 
 const LEVEL_STATUS = {
   playing: "PLAYING",
@@ -16,8 +16,15 @@ function getLevel(levelNum: number, levels: LevelData[]): LevelData {
   return levels[levelNum - 1]!;
 }
 
-function makeScrambleLettersObjs(scrambleWord: string): { id: number, letter: string, used: boolean }[] {
-  return scrambleWord.split("").reduce((p: any[], c, index) => {
+type ScrambleItem = {
+  id: number;
+  letter: string;
+  used: boolean;
+}
+
+function makeScramblePoolObjs(scrambleWord: string, old?: ScrambleItem[]): ScrambleItem[] {
+  let oldScramblePool = old;
+  const newScrambleItemObj: ScrambleItem[] = scrambleWord.split("").reduce((p: any[], c, index) => {
     p.push({
       id: index,
       letter: c,
@@ -25,45 +32,110 @@ function makeScrambleLettersObjs(scrambleWord: string): { id: number, letter: st
     })
     return p
   }, [])
+
+  if (!old) return newScrambleItemObj;
+
+  const updatedScramblePool = newScrambleItemObj.map(item => {
+    const oldItem = oldScramblePool!.find(i => i.letter === item.letter);
+    oldScramblePool = oldScramblePool?.filter(i => i.id !== oldItem?.id)
+    const isUsed = item.letter === oldItem?.letter ? oldItem.used : false;
+
+    return {
+      ...item,
+      used: isUsed
+    }
+  })
+
+  return updatedScramblePool
 }
+
+function scramblePool(poolString: string): string {
+  // Remove any spaces to work purely with the letters, then split into an array
+  let letters = poolString.replace(/\s+/g, '').split('');
+  let shuffled: string[];
+
+  do {
+    // Fisher-Yates shuffle algorithm
+    shuffled = [...letters];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    // Repeat if the shuffled version is identical to the original letters
+  } while (shuffled.join('') === letters.join(''));
+
+  // Join back with spaces so it matches your display format (e.g., "L M W O L E")
+  return shuffled.join('');
+};
 
 export function App() {
   const [currentLevelNum, setCurrentLevelNum] = useState(1);
   const [levelStatus, setLevelStatus] = useState<LevelStatus>(LEVEL_STATUS.playing);
   const [currentLevel, setCurrentLevel] = useState<LevelData>(getLevel(currentLevelNum, gameLevels));
   const [progress, setProgress] = useState(0)
-  const [scrambleLetters, setScrambleLetters] = useState(makeScrambleLettersObjs(currentLevel.pool))
-
-
+  const [{ currentPool, poolObj }, setScramblePool] = useState({
+    currentPool: currentLevel.pool,
+    poolObj: makeScramblePoolObjs(currentLevel.pool)
+  })
   const [currentWord, setCurrentWord] = useState("")
 
-  const removeLastLetter = () => {
+  const handleRemoveLastLetter = () => {
     const lastLetter = currentWord[currentWord.length - 1] ?? ""
-    const scrambleLetter = scrambleLetters.filter(w => w.letter === lastLetter && w.used)[0]!
+    const scrambleLetter = poolObj.filter(w => w.letter === lastLetter && w.used)[0]!
 
-    setScrambleLetters((prev) => prev.map(l => ({
-      ...l,
-      used: l.id === scrambleLetter.id ? false : l.used
-    })))
+    setScramblePool((prev) => ({
+      ...prev,
+      poolObj: prev.poolObj.map(l => ({
+        ...l,
+        used: l.id === scrambleLetter.id ? false : l.used
+      }))
+    }))
 
     setCurrentWord(currentWord.slice(0, -1))
   }
 
-  const addLetter = (letter: string, id) => {
-    setScrambleLetters((prev) => prev.map(l => ({
-      ...l,
-      used: l.id === id ? true : l.used
-    })))
+  const addLetter = (letter: string, id: number) => {
+    setScramblePool((prev) => ({
+      ...prev,
+      poolObj: prev.poolObj.map(l => ({
+        ...l,
+        used: l.id === id ? true : l.used
+      }))
+    }))
 
     setCurrentWord(prev => prev += letter)
+  }
+
+  const handleScramblePool = () => {
+    const newPool = scramblePool(currentPool)
+    const newPoolObj = makeScramblePoolObjs(newPool, poolObj)
+
+    setScramblePool(() => ({
+      currentPool: newPool,
+      poolObj: newPoolObj
+    }))
   }
 
   const handleWordFound = () => {
     const guessedWord = currentWord.toUpperCase()
 
+    // chekcing if the word is wgrong
     const wordExists = currentLevel?.words.some(w => w.word === guessedWord)
-    if (!wordExists) return
+    if (!wordExists) {
+      console.log("is not a valid word")
+      return;
+    }
 
+
+    // checking if the word exist already
+    const wordAlreadyExists = currentLevel.words.some(w => w.word === guessedWord && w.tached)
+    if (wordAlreadyExists) {
+      console.log("word already exists")
+      return;
+    }
+
+    // showing the user the founded word on the side of the screen
+    // by toggle the tached flag
     setCurrentLevel(lvl => ({
       ...lvl,
       words: lvl.words.map(word =>
@@ -73,7 +145,11 @@ export function App() {
       )
     }))
 
-    setScrambleLetters(prev => prev.map((letter) => ({...letter, used: false })))
+    // reset the pool so the user can select again
+    setScramblePool(prev => ({
+      ...prev,
+      poolObj: prev.poolObj.map((letter) => ({ ...letter, used: false }))
+    }))
 
     // throw the confetti
     setCurrentWord("")
@@ -135,12 +211,12 @@ export function App() {
 
               <div className="flex gap-4">
                 <button onClick={handleWordFound} disabled={currentWord === ""}>ENTER</button>
-                <button onClick={removeLastLetter} disabled={currentWord === ""}>REMOVE</button>
-                <button>SCRAMBLE</button>
+                <button onClick={handleRemoveLastLetter} disabled={currentWord === ""}>REMOVE</button>
+                <button onClick={handleScramblePool}>SCRAMBLE</button>
               </div>
             </div>
             <div className="gap-4 h-[200px] w-[400px] flex justify-center items-center">
-              {scrambleLetters?.map(({ letter, used, id }, key: number) => (
+              {poolObj?.map(({ letter, used, id }, key: number) => (
                 <div key={key}>
                   {!used ? (
                     <button key={key} onClick={() => addLetter(letter, id)}>
@@ -158,7 +234,7 @@ export function App() {
   );
 }
 
-const DashedWord = ({ word, tached }) => {
+const DashedWord = ({ word, tached }: WordItem) => {
   const wordToRender = tached ? word : word.split("").map(() => "_ ").join("")
   return (
     <div className="flex gap-2 h-[30px]">
