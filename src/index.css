@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+body {
+  font-family: "Schoolbell", cursive;
+  font-weight: 400;
+  font-style: normal;
+  overflow: hidden;
+
+  background-image: url("./assets/bully-background-game.png");
+  background-size: cover;
+  background-position: left;
+  background-repeat: no-repeat;
+}
+

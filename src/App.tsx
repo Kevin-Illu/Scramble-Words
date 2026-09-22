@@ -12,6 +12,7 @@ const LEVEL_STATUS = {
 const PASSING_THRESHOLD = 10
 const TIMER = 20 // 180
 const PASSING_CONDITION = 10
+const FIRST_LEVEL = 1
 
 type LevelStatus = typeof LEVEL_STATUS[keyof typeof LEVEL_STATUS];
 
@@ -72,19 +73,17 @@ function scramblePool(poolString: string): string {
 };
 
 export function App() {
-  const [currentLevelNum, setCurrentLevelNum] = useState(2);
+  const [currentLevelNum, setCurrentLevelNum] = useState(FIRST_LEVEL);
   const [levelStatus, setLevelStatus] = useState<LevelStatus>(LEVEL_STATUS.playing);
   const [currentLevel, setCurrentLevel] = useState<LevelData>(getLevel(currentLevelNum, gameLevels));
   const [progress, setProgress] = useState(0)
-  
+
   const [showStatus, setShowStatus] = useState(false)
 
   const getStatus = () => {
     if (levelStatus === LEVEL_STATUS.passed) return "YOU WIN";
-
     return "YOU LOSE"!
   }
-
 
   const [{ currentPool, poolObj }, setScramblePool] = useState({
     currentPool: currentLevel.pool,
@@ -101,7 +100,7 @@ export function App() {
     setShowStatus(true)
   };
 
-  const { formattedTime, startTimer, pauseTimer, resetTimer, isRunning, timeLeft } = useGameTimer(TIMER, handleTimeUp)
+  const { formattedTime, startTimer, pauseTimer, resetTimer, isRunning } = useGameTimer(TIMER, handleTimeUp)
 
   const completeCurrentLevel = () => {
     setCurrentLevel(level => ({
@@ -217,6 +216,7 @@ export function App() {
     handleScramblePool(true);
     setLevelStatus(LEVEL_STATUS.playing);
     startTimer();
+    setShowStatus(false);
   }
 
   // Stop timer and change the level state to complete
@@ -249,63 +249,57 @@ export function App() {
 
 
   return (
-    <div className="w-screen h-screen p-16 text-xl">
-      <div className="flex gap-4">
-        <p>
-          {levelStatus === LEVEL_STATUS.playing ? LEVEL_STATUS.failed : levelStatus} {progress}%
-        </p>
-        <p>
-          Level: {currentLevelNum}
-        </p>
+    <div className="z-1 w-screen h-screen p-16 text-xl">
+      <div className="flex justify-between items-center gap-4">
         <div className="timer-display">
           <span>Time: {formattedTime}</span>
         </div>
-        <div>
-          <button onClick={() => { resetAll() }}>PLAY</button>
-        </div>
-        <div>
-          {isRunning ? (
-            <button disabled={showStatus} onClick={() => pauseTimer()}>PAUSE</button>
-          ) : (
-            <button disabled={showStatus} onClick={() => startTimer()}>CONTINUE</button>
-          )}
-        </div>
+        <p>
+          {levelStatus === LEVEL_STATUS.playing ? LEVEL_STATUS.failed : levelStatus} {progress}%
+        </p>
 
-        <div>
+        <div className="flex justify-between items-center gap-4">
           <div>
-            <p>{ showStatus ? getStatus(): ""}</p>
+            <button onClick={() => { resetAll() }}>PLAY</button>
+          </div>
+          <div>
+            {isRunning ? (
+              <button disabled={showStatus} onClick={() => pauseTimer()}>PAUSE</button>
+            ) : (
+              <button disabled={showStatus} onClick={() => startTimer()}>CONTINUE</button>
+            )}
           </div>
         </div>
       </div>
-      <div className="w-full h-full p-6 flex justify-center items-center">
-        <div className="grid grid-flow-col grid-rows-3 gap-4 w-[80%] h-[80%] place-items-center">
+      <div className="w-full h-full p-6 flex text-xl">
+        <div className="flex flex-wrap justify-start items-center gap-8 w-[900px] pl-8">
           {currentLevel?.words.map((props, key) => (
             <DashedWord key={key} {...props} />
           ))}
         </div>
-        <div className="w-full h-full flex justify-center items-center gap-4">
 
-          <div className="flex flex-col justify-center items-center gap-4">
+        <div className="w-full h-full flex justify-center items-center gap-4 z-10 text-white pl-20">
+          <div className="flex flex-col justify-center items-center gap-4 text-7xl">
             <div className="flex flex-col justify-center items-center gap-4">
 
-              <div className="text-6xl px-6 py-20 text-center">
+              <div className="px-6 py-20 text-center">
                 <p className="h-[30px] w-fit">
                   {currentWord}
                 </p>
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex gap-4 text-2xl">
                 <button onClick={handleWordFound} disabled={!isRunning || currentWord === ""}>ENTER</button>
                 <button onClick={handleRemoveLastLetter} disabled={!isRunning || currentWord === ""}>REMOVE</button>
                 <button onClick={() => handleScramblePool(false)} disabled={!isRunning}>SCRAMBLE</button>
               </div>
             </div>
-            <div className="gap-4 h-[200px] w-[400px] flex justify-center items-center">
+            <div className="gap-2 h-[200px] w-[400px] flex justify-center items-center">
               {poolObj?.map(({ letter, used, id }, key: number) => (
                 <div key={key}>
                   {!used ? (
                     <button key={key} onClick={() => addLetter(letter, id)} disabled={!isRunning}>
-                      <p className="h-[20px] w-fit">{letter}</p>
+                      <p className="">{letter}</p>
                     </button>
                   ) : <></>}
                 </div>
@@ -320,9 +314,9 @@ export function App() {
 }
 
 const DashedWord = ({ word, tached }: WordItem) => {
-  const wordToRender = tached ? word : word.split("").map(() => "_ ").join("")
+  const wordToRender = tached ? word : word.split("").map(() => "_ ").join(" ")
   return (
-    <div className="flex gap-2 h-[30px]">
+    <div className="h-fit w-fit">
       <p>{wordToRender}</p>
     </div>
   )
