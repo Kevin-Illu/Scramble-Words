@@ -11,6 +11,7 @@ const LEVEL_STATUS = {
 
 const PASSING_THRESHOLD = 10
 const TIMER = 20 // 180
+const PASSING_CONDITION = 10
 
 type LevelStatus = typeof LEVEL_STATUS[keyof typeof LEVEL_STATUS];
 
@@ -93,7 +94,7 @@ export function App() {
   const handleTimeUp = () => {
     completeCurrentLevel()
 
-    if (checkIfPassed(currentLevel)) {
+    if (checkIfPassed()) {
       setLevelStatus(LEVEL_STATUS.failed)
     }
 
@@ -190,10 +191,15 @@ export function App() {
     setCurrentWord("")
   }
 
-  const checkIfPassed = (levelData: LevelData) => {
-    const progress = calculateLevelProgress(levelData); // From the previous calculation
+  const checkIfPassed = () => {
+    const progress = calculateLevelProgress(currentLevel); // From the previous calculation
     return progress >= PASSING_THRESHOLD;
   };
+
+  const checkIfPassedWithOneHundredPercent = () => {
+    const progress = calculateLevelProgress(currentLevel);
+    return progress >= PASSING_CONDITION;
+  }
 
   const calculateLevelProgress = (levelData: LevelData) => {
     const totalWords = levelData.words.length;
@@ -207,22 +213,25 @@ export function App() {
   const resetAll = () => {
     resetTimer();
     setCurrentLevel(getLevel(currentLevelNum, gameLevels));
-    setCurrentWord("")
+    setCurrentWord("");
     handleScramblePool(true);
-    setLevelStatus(LEVEL_STATUS.playing)
+    setLevelStatus(LEVEL_STATUS.playing);
     startTimer();
   }
 
   // Stop timer and change the level state to complete
   useEffect(() => {
-    if (isRunning && progress === 100) {
-      pauseTimer()
+    const levelCompleted = checkIfPassedWithOneHundredPercent()
+
+    if (isRunning && levelCompleted) {
+      setShowStatus(true);
+      pauseTimer();
       setCurrentLevel((prev) => ({
         ...prev,
         complete: true,
-      }))
+      }));
     }
-  }, [timeLeft])
+  }, [currentLevel])
 
 
   // it changes whenever the user assert a word
@@ -256,9 +265,9 @@ export function App() {
         </div>
         <div>
           {isRunning ? (
-            <button onClick={() => pauseTimer()}>PAUSE</button>
+            <button disabled={showStatus} onClick={() => pauseTimer()}>PAUSE</button>
           ) : (
-            <button onClick={() => startTimer()}>CONTINUE</button>
+            <button disabled={showStatus} onClick={() => startTimer()}>CONTINUE</button>
           )}
         </div>
 
