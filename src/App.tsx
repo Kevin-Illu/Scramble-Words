@@ -77,8 +77,9 @@ export function App() {
   const [levelStatus, setLevelStatus] = useState<LevelStatus>(LEVEL_STATUS.playing);
   const [currentLevel, setCurrentLevel] = useState<LevelData>(getLevel(currentLevelNum, gameLevels));
   const [progress, setProgress] = useState(0)
-
   const [showStatus, setShowStatus] = useState(false)
+  const statusTextColorClassName = ((levelStatus === LEVEL_STATUS.failed) || (levelStatus === LEVEL_STATUS.playing))
+            ? "text-red-600" : "text-green-600";
 
   const getStatus = () => {
     if (levelStatus === LEVEL_STATUS.passed) return "YOU WIN";
@@ -213,7 +214,7 @@ export function App() {
     resetTimer();
     setCurrentLevel(getLevel(currentLevelNum, gameLevels));
     setCurrentWord("");
-    handleScramblePool(true);
+    // handleScramblePool(true);
     setLevelStatus(LEVEL_STATUS.playing);
     startTimer();
     setShowStatus(false);
@@ -249,20 +250,17 @@ export function App() {
 
 
   return (
-    <div className="z-1 w-screen h-screen p-16 text-xl">
-      <div className="flex justify-between items-center gap-4">
-        <div className="timer-display">
+    <div className="z-1 w-screen h-screen px-16 pb-16 text-2xl">
+      <div className="flex justify-between items-center gap-4 pt-6 text-white">
+        <div className="min-w-200px">
           <span>Time: {formattedTime}</span>
         </div>
-        <p>
-          {levelStatus === LEVEL_STATUS.playing ? LEVEL_STATUS.failed : levelStatus} {progress}%
+        <p className={`${statusTextColorClassName}`}>
+          {progress}%
         </p>
 
         <div className="flex justify-between items-center gap-4">
-          <div>
-            <button onClick={() => { resetAll() }}>PLAY</button>
-          </div>
-          <div>
+          <div className="min-w-200px">
             {isRunning ? (
               <button disabled={showStatus} onClick={() => pauseTimer()}>PAUSE</button>
             ) : (
