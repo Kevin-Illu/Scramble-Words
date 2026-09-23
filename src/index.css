@@ -6,6 +6,24 @@ body {
   font-style: normal;
   overflow: hidden;
 
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vh;
+}
+
+.home {}
+
+.levels {}
+
+.home, .levels {
+  background-image: url("./assets/background-home-and-select-levels.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.level {
   background-image: url("./assets/bully-background-game.png");
   background-size: cover;
   background-position: left;

@@ -1,85 +1,47 @@
-import "./index.css";
+import { FIRST_LEVEL, LEVEL_STATUS, PASSING_CONDITION, PASSING_THRESHOLD, TIME, TOTAL_LEVELS, type LevelStatus } from "@/consts";
+import { gameLevels, getLevel, makeScramblePoolObjs, scramblePool, type LevelData, type WordItem } from "@/game/game-logic";
+import { useGameTimer } from "@/hooks/gametimer";
 import { useEffect, useState } from "react";
-import { gameLevels, type LevelData, type WordItem } from "./GameLogic";
-import { useGameTimer } from "./useGameTimer";
+import { useLocation, useRoute } from "wouter";
 
-const LEVEL_STATUS = {
-  playing: "PLAYING",
-  passed: "PASSED",
-  failed: "FAILED"
-} as const;
 
-const PASSING_THRESHOLD = 10
-const TIMER = 20 // 180
-const PASSING_CONDITION = 10
-const FIRST_LEVEL = 1
-
-type LevelStatus = typeof LEVEL_STATUS[keyof typeof LEVEL_STATUS];
-
-function getLevel(levelNum: number, levels: LevelData[]): LevelData {
-  return levels[levelNum - 1]!;
+function validateParam(levelNum: string | number): boolean {
+  const num = Number(levelNum)
+  return !isNaN(num) && num >= FIRST_LEVEL && num < TOTAL_LEVELS
 }
 
-type ScrambleItem = {
-  id: number;
-  letter: string;
-  used: boolean;
-}
+export function LevelPage() {
+  const [match, params] = useRoute("/level/:num")
+  const [, navigate] = useLocation()
 
-function makeScramblePoolObjs(scrambleWord: string, old?: ScrambleItem[]): ScrambleItem[] {
-  let oldScramblePool = old;
-  const newScrambleItemObj: ScrambleItem[] = scrambleWord.split("").reduce((p: any[], c, index) => {
-    p.push({
-      id: index,
-      letter: c,
-      used: false
-    })
-    return p
-  }, [])
 
-  if (!old) return newScrambleItemObj;
-
-  const updatedScramblePool = newScrambleItemObj.map(item => {
-    const oldItem = oldScramblePool!.find(i => i.letter === item.letter);
-    oldScramblePool = oldScramblePool?.filter(i => i.id !== oldItem?.id)
-    const isUsed = item.letter === oldItem?.letter ? oldItem.used : false;
-
-    return {
-      ...item,
-      used: isUsed
+  // when the user enters on a level
+  // the level should be set it up
+  useEffect(() => {
+    if (!match) {
+      navigate("/not-found")
+      return
     }
-  })
 
-  return updatedScramblePool
-}
-
-function scramblePool(poolString: string): string {
-  // Remove any spaces to work purely with the letters, then split into an array
-  let letters = poolString.replace(/\s+/g, '').split('');
-  let shuffled: string[];
-
-  do {
-    // Fisher-Yates shuffle algorithm
-    shuffled = [...letters];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    if (!validateParam(params.num)) {
+      navigate("/not-found")
+      return
     }
-    // Repeat if the shuffled version is identical to the original letters
-  } while (shuffled.join('') === letters.join(''));
 
-  // Join back with spaces so it matches your display format (e.g., "L M W O L E")
-  return shuffled.join('');
-};
+    const level = Number(params.num)
 
-export function App() {
-  const [currentLevelNum, setCurrentLevelNum] = useState(FIRST_LEVEL);
+    setCurrentLevelNum(level)
+  }, [match, params!.num, navigate])
+
+
+  const [currentLevelNum, setCurrentLevelNum] = useState(Number(params!.num));
+
   const [levelStatus, setLevelStatus] = useState<LevelStatus>(LEVEL_STATUS.playing);
   const [currentLevel, setCurrentLevel] = useState<LevelData>(getLevel(currentLevelNum, gameLevels));
   const [progress, setProgress] = useState(0)
   const [showStatus, setShowStatus] = useState(false)
   const statusTextColorClassName = ((levelStatus === LEVEL_STATUS.failed) || (levelStatus === LEVEL_STATUS.playing))
-            ? "text-red-600" : "text-green-600";
+    ? "text-red-600" : "text-green-600";
 
   const getStatus = () => {
     if (levelStatus === LEVEL_STATUS.passed) return "YOU WIN";
@@ -101,7 +63,7 @@ export function App() {
     setShowStatus(true)
   };
 
-  const { formattedTime, startTimer, pauseTimer, resetTimer, isRunning } = useGameTimer(TIMER, handleTimeUp)
+  const { formattedTime, startTimer, pauseTimer, resetTimer, isRunning } = useGameTimer(TIME, handleTimeUp)
 
   const completeCurrentLevel = () => {
     setCurrentLevel(level => ({
@@ -220,6 +182,14 @@ export function App() {
     setShowStatus(false);
   }
 
+  useEffect(() => {
+    setCurrentLevel(getLevel(currentLevelNum, gameLevels))
+    setScramblePool({
+      currentPool: currentLevel.pool,
+      poolObj: makeScramblePoolObjs(currentLevel.pool)
+    })
+  }, [currentLevelNum])
+
   // Stop timer and change the level state to complete
   useEffect(() => {
     const levelCompleted = checkIfPassedWithOneHundredPercent()
@@ -250,7 +220,7 @@ export function App() {
 
 
   return (
-    <div className="z-1 w-screen h-screen px-16 pb-16 text-2xl">
+    <div className="z-1 w-screen h-screen px-16 pb-16 text-2xl level">
       <div className="flex justify-between items-center gap-4 pt-6 text-white">
         <div className="min-w-200px">
           <span>Time: {formattedTime}</span>
@@ -319,6 +289,3 @@ const DashedWord = ({ word, tached }: WordItem) => {
     </div>
   )
 }
-
-
-export default App;

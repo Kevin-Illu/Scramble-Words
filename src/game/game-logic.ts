@@ -10,6 +10,12 @@ export interface LevelData {
   complete: boolean;
 }
 
+export type ScrambleItem = {
+  id: number;
+  letter: string;
+  used: boolean;
+}
+
 export const gameLevels: LevelData[] = [
   {
     level: 1,
@@ -176,3 +182,54 @@ export const gameLevels: LevelData[] = [
   },
 ];
 
+export function getLevel(levelNum: number, levels: LevelData[]): LevelData {
+  const levelToPlay = levels[levelNum - 1];
+  console.log({ levelToPlay });
+  return levelToPlay!;
+}
+
+export function makeScramblePoolObjs(scrambleWord: string, old?: ScrambleItem[]): ScrambleItem[] {
+  let oldScramblePool = old;
+  const newScrambleItemObj: ScrambleItem[] = scrambleWord.split("").reduce((p: any[], c, index) => {
+    p.push({
+      id: index,
+      letter: c,
+      used: false
+    })
+    return p
+  }, [])
+
+  if (!old) return newScrambleItemObj;
+
+  const updatedScramblePool = newScrambleItemObj.map(item => {
+    const oldItem = oldScramblePool!.find(i => i.letter === item.letter);
+    oldScramblePool = oldScramblePool?.filter(i => i.id !== oldItem?.id)
+    const isUsed = item.letter === oldItem?.letter ? oldItem.used : false;
+
+    return {
+      ...item,
+      used: isUsed
+    }
+  })
+
+  return updatedScramblePool
+}
+
+export function scramblePool(poolString: string): string {
+  // Remove any spaces to work purely with the letters, then split into an array
+  let letters = poolString.replace(/\s+/g, '').split('');
+  let shuffled: string[];
+
+  do {
+    // Fisher-Yates shuffle algorithm
+    shuffled = [...letters];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    // Repeat if the shuffled version is identical to the original letters
+  } while (shuffled.join('') === letters.join(''));
+
+  // Join back with spaces so it matches your display format (e.g., "L M W O L E")
+  return shuffled.join('');
+};
