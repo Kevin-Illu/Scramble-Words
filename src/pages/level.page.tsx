@@ -1,6 +1,9 @@
 import { FIRST_LEVEL, LEVEL_STATUS, PASSING_CONDITION, PASSING_THRESHOLD, TIME, TOTAL_LEVELS, type LevelStatus } from "@/consts";
 import { gameLevels, getLevel, makeScramblePoolObjs, scramblePool, type LevelData, type WordItem } from "@/game/game-logic";
 import { useGameTimer } from "@/hooks/gametimer";
+import { Dialog } from "@/ui/dialog.component";
+import { Button } from "@/ui/ui.component";
+import { ChevronLeft, House, Play, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
@@ -42,6 +45,9 @@ export function LevelPage() {
   const [showStatus, setShowStatus] = useState(false)
   const statusTextColorClassName = ((levelStatus === LEVEL_STATUS.failed) || (levelStatus === LEVEL_STATUS.playing))
     ? "text-red-600" : "text-green-600";
+
+
+  const [dialogOpen, setDialogOpen] = useState(true);
 
   const getStatus = () => {
     if (levelStatus === LEVEL_STATUS.passed) return "YOU WIN";
@@ -182,6 +188,16 @@ export function LevelPage() {
     setShowStatus(false);
   }
 
+  const startGame = () => {
+    resetTimer();
+    setCurrentLevel(getLevel(currentLevelNum, gameLevels));
+    setCurrentWord("");
+    setLevelStatus(LEVEL_STATUS.playing);
+    startTimer();
+    setShowStatus(false);
+    setDialogOpen(false);
+  }
+
   useEffect(() => {
     setCurrentLevel(getLevel(currentLevelNum, gameLevels))
     setScramblePool({
@@ -273,10 +289,33 @@ export function LevelPage() {
                 </div>
               ))}
             </div>
+
+
           </div>
+
+
         </div>
 
       </div>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={`LEVEL ${currentLevelNum}`}
+        closeOnOutsideClick={false}
+        showCloseButton={false}
+      >
+        <div className="flex justify-center items-center gap-4">
+          <Button variant="secondary" onClick={() => navigate("/")}>
+          <House size={36} />
+          </Button>
+          <Button onClick={() => startGame()}>
+            <Play size={72} />
+          </Button>
+          <Button variant="secondary" onClick={() => navigate("/levels")}>
+            <Undo2 size={36} />
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

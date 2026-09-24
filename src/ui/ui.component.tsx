@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React, { type ReactElement, type ReactNode } from 'react';
 
 type TextSize = 'sm' | 'md' | 'lg';
 type ButtonVariant = 'primary' | 'secondary';
@@ -31,14 +31,16 @@ export interface StageButtonsContainerProps {
 export interface OptionItem {
   id: string | number;
   label: string;
-  icon?: string;
+  icon?: ReactElement;
+  variant?: ButtonVariant;
   onClick?: () => void;
 }
 
 export interface OptionCardProps {
-  icon?: string;
+  icon?: ReactElement;
   label: string;
   onClick?: () => void;
+  variant?: ButtonVariant;
   className?: string;
 }
 
@@ -160,26 +162,31 @@ export const StageButtonsContainer: React.FC<StageButtonsContainerProps> = ({
  * Option Card Component - Individual selectable option
  */
 export const OptionCard: React.FC<OptionCardProps> = ({
-  icon = '■',
+  icon = null,
+  variant = "primary",
   label,
   onClick,
   className = '',
 }) => {
-  return (
-    <button
-      onClick={onClick}
-      className={`
-        cursor-pointer
-        w-full border-2 border-yellow-500 bg-transparent text-yellow-500 
-        px-4 py-3 rounded transition-all duration-200
-        hover:bg-yellow-500 hover:text-black
-        font-semibold text-center text-2xl
-        ${className}
-      `}
-    >
-      <span className="mr-2">{icon}</span>
+  if (!label) return (
+    <Button variant={variant} onClick={onClick} className={className}>
+      {icon}
+    </Button>
+  )
+
+  if (!icon) return (
+    <Button variant={variant} onClick={onClick} className={className}>
       {label}
-    </button>
+    </Button>
+  )
+
+  return (
+    <Button onClick={onClick} className={className} variant={variant}>
+      <div className='flex justify-center items-center gap-4'>
+        {icon}
+        {label}
+      </div>
+    </Button>
   );
 };
 
@@ -207,11 +214,12 @@ export const OptionsGrid: React.FC<OptionsGridProps> = ({
       {options.map((option) => (
         <div
           key={option.id}
-          className={isSingleOption ? 'w-full max-w-xs' : ''}
+          className={isSingleOption ? 'max-w-xs' : ''}
         >
           <OptionCard
             icon={option.icon}
             label={option.label}
+            variant={option?.variant}
             onClick={option.onClick}
           />
         </div>
@@ -251,9 +259,11 @@ export const MenuContainer: React.FC<MenuContainerProps> = ({
       {children}
 
       {quote && (
-        <p className="text-center text-gray-500 text-xl italic mt-6">
-          "{quote}"
-        </p>
+        <div className="flex justify-center items-center text-center w-full text-gray-500 text-xl italic mt-6">
+          <div className='max-w-[400px]'>
+            "{quote}"
+          </div>
+        </div>
       )}
     </div>
   );
