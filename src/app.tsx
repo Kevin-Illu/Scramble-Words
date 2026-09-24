@@ -13,7 +13,7 @@ export function App() {
           <Route path="/" component={HomePage} />
           <Route path="/levels" component={LevelsSelectorPage} />
           <Route path="/level/:num" component={LevelPage} />
-          
+          <Route>404: No such page!</Route>
         </Switch>
       </div>
     </Router>
