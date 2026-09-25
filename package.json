@@ -1,11 +1,12 @@
 {
-  "name": "bun-react-template",
+  "name": "scramble-words",
+  "packageManager": "bun@latest",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "scripts": {
     "dev": "bun --hot src/index.ts",
     "build": "bun run build.ts",
+    "preview": "bun run build && bun-serve dist --port=3000",
     "start": "NODE_ENV=production bun src/index.ts"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
     "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "bun-serve": "^0.1.1",
     "tailwindcss": "^4.3.3"
   },
   "peerDependencies": {
