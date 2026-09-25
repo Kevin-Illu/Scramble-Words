@@ -45,7 +45,7 @@ export function HomePage() {
   useEffect(() => {
     switch (difficulty) {
       case DIFFICULTY.easy:
-        updatePassingThreshold(10, DIFFICULTY.easy);
+        updatePassingThreshold(40, DIFFICULTY.easy);
         break;
       case DIFFICULTY.normal:
         updatePassingThreshold(60, DIFFICULTY.normal);
