@@ -9,13 +9,13 @@ Remember sweating bullets in Mr. Galloway's English class while desperately tryi
 ## Screenshots
 
 <!-- Add Screenshot of Main Menu / Difficulty Selector here -->
-<!-- Example: ![Main Menu](path/to/main-menu.png) -->
+![Main Menu](public/main-menu.png)
 
 <!-- Add Screenshot of Gameplay Board here -->
-<!-- Example: ![Gameplay](path/to/gameplay.png) -->
+![Gameplay](public/gameplay.png)
 
 <!-- Add Screenshot of Results / Passed Level here -->
-<!-- Example: ![Results](path/to/results.png) -->
+![Results](public/results.png)
 
 ---
 
