@@ -1,13 +1,14 @@
-import { FIRST_LEVEL, LEVEL_STATUS, PASSING_CONDITION, PASSING_THRESHOLD, TIME, TOTAL_LEVELS, type LevelStatus } from "@/consts";
+import { FIRST_LEVEL, LEVEL_STATUS, PASSING_CONDITION, TIME, TOTAL_LEVELS, type LevelStatus } from "@/consts";
 import { gameLevels, getLevel, makeScramblePoolObjs, scramblePool, type LevelData, type WordItem } from "@/game/game-logic";
 import { useGameTimer } from "@/hooks/gametimer";
+import { useGlobalState } from "@/state/global.state";
 import { ConfettiEffect } from "@/ui/confetti.component";
 import { Dialog } from "@/ui/dialog.component";
 import { Button } from "@/ui/ui.component";
-import { BetweenHorizontalStart, BookCheck, Delete, House, Pause, Play, RotateCcw, Undo2 } from "lucide-react";
+import { BetweenHorizontalStart, BookCheck, Delete, Home, House, Pause, Play, RotateCcw, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
-
+import { navigate } from "wouter/use-browser-location";
 
 function validateParam(levelNum: string | number): boolean {
   const num = Number(levelNum)
@@ -23,12 +24,12 @@ function calculateLevelProgress(levelData: LevelData) {
   return Math.round((foundWords / totalWords) * 100);
 };
 
-function checkIfPassed(level) {
+function checkIfPassed(level: LevelData, threshold: number) {
   const progress = calculateLevelProgress(level); // From the previous calculation
-  return progress >= PASSING_THRESHOLD;
+  return progress >= threshold;
 };
 
-function checkIfPassedWithOneHundredPercent(level) {
+function checkIfPassedWithOneHundredPercent(level: LevelData) {
   const progress = calculateLevelProgress(level);
   return progress >= PASSING_CONDITION;
 }
@@ -67,15 +68,9 @@ export function LevelPage() {
   const [showStatus, setShowStatus] = useState(false)
   const statusTextColorClassName = ((levelStatus === LEVEL_STATUS.failed) || (levelStatus === LEVEL_STATUS.playing))
     ? "text-red-600" : "text-green-600";
-
-
   const [dialogOpen, setDialogOpen] = useState(true);
   const [dialogResultOpen, setDialogResultOpen] = useState(showStatus);
-
-  const getStatus = () => {
-    if (levelStatus === LEVEL_STATUS.passed) return "YOU WIN";
-    return "YOU LOSE"!
-  }
+  const PASSING_THRESHOLD = useGlobalState((s) => s.PASSING_THRESHOLD);
 
   const [{ currentPool, poolObj }, setScramblePool] = useState({
     currentPool: currentLevel.pool,
@@ -84,7 +79,7 @@ export function LevelPage() {
   const [currentWord, setCurrentWord] = useState("")
   const handleTimeUp = () => {
     completeCurrentLevel();
-    const levelStatus = checkIfPassed(currentLevel) ? LEVEL_STATUS.passed : LEVEL_STATUS.failed;
+    const levelStatus = checkIfPassed(currentLevel, PASSING_THRESHOLD) ? LEVEL_STATUS.passed : LEVEL_STATUS.failed;
     setLevelStatus(levelStatus);
     setShowStatus(true);
     setDialogResultOpen(true);
@@ -142,6 +137,14 @@ export function LevelPage() {
     }))
   }
 
+  const resetScramblePool = () => {
+    // reset the pool so the user can select again
+    setScramblePool(prev => ({
+      ...prev,
+      poolObj: prev.poolObj.map((letter) => ({ ...letter, used: false }))
+    }))
+  }
+
   const handleWordFound = () => {
     const guessedWord = currentWord.toUpperCase();
 
@@ -170,12 +173,7 @@ export function LevelPage() {
       )
     }))
 
-    // reset the pool so the user can select again
-    setScramblePool(prev => ({
-      ...prev,
-      poolObj: prev.poolObj.map((letter) => ({ ...letter, used: false }))
-    }))
-
+    resetScramblePool();
     // throw the confetti
     setCurrentWord("")
   }
@@ -191,9 +189,11 @@ export function LevelPage() {
 
   const restartLevel = () => {
     setLevelStatus(LEVEL_STATUS.playing);
+    setCurrentWord("");
+    setCurrentLevel(getLevel(currentLevelNum, gameLevels));
+    resetScramblePool();
     resetTimer();
-    setShowStatus(false)
-    setCurrentWord("")
+    setShowStatus(false);
     setDialogResultOpen(false);
     startTimer();
   }
@@ -359,6 +359,12 @@ const GameResultsDialog = ({ dialogOpen, setDialogOpen, levelStatus, restartLeve
     >
       <div className="flex flex-col justify-center items-center gap-4 place-items-center">
         <div className="flex justify-center items-center gap-4">
+          <Button variant="secondary" onClick={() => navigate("/")}>
+            <div className="flex justify-center items-center gap-4">
+              <p>GO HOME</p>
+              <Home size={26} />
+            </div>
+          </Button>
           {levelStatus === LEVEL_STATUS.passed ? (
             <Button onClick={() => nextLevel()}>
               <div className="flex justify-center items-center gap-4">
@@ -390,6 +396,8 @@ const GameResultsDialog = ({ dialogOpen, setDialogOpen, levelStatus, restartLeve
 
 const StartingGameDialog = ({ dialogOpen, setDialogOpen, currentLevelNum, startGame }) => {
   const [, navigate] = useLocation();
+  const PASSING_THRESHOLD = useGlobalState(s => s.PASSING_THRESHOLD);
+
   return (
     <Dialog
       open={dialogOpen}
@@ -403,7 +411,7 @@ const StartingGameDialog = ({ dialogOpen, setDialogOpen, currentLevelNum, startG
           <div>
             <p className="text-gray-300 ">REQUIRED ACCURACY</p>
             <div className="text-4xl">
-              MIN <span>70%</span>
+              MIN <span>{PASSING_THRESHOLD}%</span>
             </div>
           </div>
           <div className="text-center">

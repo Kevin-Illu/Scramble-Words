@@ -15,7 +15,8 @@
     "react": "^19",
     "react-confetti": "^6.4.0",
     "react-dom": "^19",
-    "wouter": "^3.11.0"
+    "wouter": "^3.11.0",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@types/bun": "latest",

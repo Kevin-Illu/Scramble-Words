@@ -1,9 +1,67 @@
+import { DIFFICULTY, type Difficulty } from "@/consts";
+import { useGlobalState } from "@/state/global.state";
+import { DifficultySelectorCard } from "@/ui/difficulty-selector.component";
 import { MenuContainer } from "@/ui/ui.component";
-import { University } from "lucide-react";
+import { Crown, Flame, Shield, University, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { useShallow } from "zustand/shallow";
 
 export function HomePage() {
   const [, navigate] = useLocation();
+  const { updatePassingThreshold, selectedDifficulty } = useGlobalState(useShallow((s) => ({
+    updatePassingThreshold: s.updatePassingThreshold,
+    selectedDifficulty: s.difficulty
+  })))
+  const [difficulty, setDifficulty] = useState<Difficulty>(selectedDifficulty);
+
+  const difficulties = [
+    {
+      id: DIFFICULTY.easy,
+      label: 'EASY',
+      description: 'For beginners',
+      icon: <Zap size={32} />
+    },
+    {
+      id: DIFFICULTY.normal,
+      label: 'NORMAL',
+      description: 'Standard',
+      icon: <Shield size={32} />
+    },
+    {
+      id: DIFFICULTY.hard,
+      label: 'HARD',
+      description: 'Challenging',
+      icon: <Flame size={32} />
+    },
+    {
+      id: DIFFICULTY.expert,
+      label: 'EXPERT',
+      description: 'Expert only',
+      icon: <Crown size={32} />
+    },
+  ];
+
+  useEffect(() => {
+    switch (difficulty) {
+      case DIFFICULTY.easy:
+        updatePassingThreshold(10, DIFFICULTY.easy);
+        break;
+      case DIFFICULTY.normal:
+        updatePassingThreshold(60, DIFFICULTY.normal);
+        break;
+      case DIFFICULTY.hard:
+        updatePassingThreshold(70, DIFFICULTY.hard);
+        break;
+      case DIFFICULTY.expert:
+        updatePassingThreshold(100, DIFFICULTY.expert);
+        break;
+      default:
+        updatePassingThreshold(50, DIFFICULTY.normal);
+        break;
+    }
+  }, [difficulty])
+
   return (
     <div className="home w-screen h-screen text-white">
       <div className="w-full h-full gap-8 flex flex-col justify-center items-center">
@@ -20,6 +78,12 @@ export function HomePage() {
               }
             ]}
             quote="The hardest years in life are those between ten and seventy. — Helen Hayes">
+            <DifficultySelectorCard
+              difficulties={difficulties}
+              onDifficultySelect={setDifficulty}
+              selectedDifficulty={difficulty}
+            >
+            </DifficultySelectorCard>
           </MenuContainer>
         </div>
         <p className="text-gray-200">Bully's english class mini game recreation made by Kevin Illu</p>
