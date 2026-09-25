@@ -229,6 +229,7 @@ export function LevelPage() {
 
     if (isRunning && levelCompleted) {
       setShowStatus(true);
+      setDialogResultOpen(true);
       pauseTimer();
       setCurrentLevel((prev) => ({
         ...prev,
@@ -446,9 +447,11 @@ const StartingGameDialog = ({ dialogOpen, setDialogOpen, currentLevelNum, startG
 const DashedWord = ({ word, tached }: WordItem) => {
   const debugMode = useGlobalState(s => s.debugMode);
   const wordToRender = (debugMode || tached) ? word : word.split("").map(() => "_ ").join(" ");
+  const opacity = (debugMode && !tached) ? "opacity-25" : "opacity-100";
+  const textColor = debugMode && tached ? "text-green-600" : "text-black";
 
   return (
-    <div className="h-fit w-fit">
+    <div className={`${opacity} ${textColor}`}>
       <p>{wordToRender}</p>
     </div>
   )
