@@ -1,20 +1,20 @@
 export interface WordItem {
   word: string;
   tached: boolean;
-}
+};
 
 export interface LevelData {
   level: number;
   pool: string;
   words: WordItem[];
   complete: boolean;
-}
+};
 
 export type ScrambleItem = {
   id: number;
   letter: string;
   used: boolean;
-}
+};
 
 export const gameLevels: LevelData[] = [
   {
@@ -184,9 +184,8 @@ export const gameLevels: LevelData[] = [
 
 export function getLevel(levelNum: number, levels: LevelData[]): LevelData {
   const levelToPlay = levels[levelNum - 1];
-  console.log({ levelToPlay });
   return levelToPlay!;
-}
+};
 
 export function makeScramblePoolObjs(scrambleWord: string, old?: ScrambleItem[]): ScrambleItem[] {
   let oldScramblePool = old;

@@ -6,15 +6,23 @@ export interface GlobalState {
   PASSING_THRESHOLD: number;
   difficulty: Difficulty;
   updatePassingThreshold: (value: number, difficulty: Difficulty) => void; 
+  debugMode: boolean;
+  toggleDebugMode: () => void;
 };
 
 export const useGlobalState = create<GlobalState>()(persist((set) => ({
   PASSING_THRESHOLD: PASSING_THRESHOLD,
   difficulty: DIFFICULTY.easy,
-  updatePassingThreshold: (value: number, difficulty: Difficulty) => set(() => ({
+  debugMode: false,
+  updatePassingThreshold: (value: number, difficulty: Difficulty) => set((s) => ({
+    ...s,
     PASSING_THRESHOLD: value,
-    difficulty: difficulty
+    difficulty: difficulty,
   })),
+  toggleDebugMode: () => set((s) => ({
+    ...s,
+    debugMode: !s.debugMode
+  }))
 }), {
   name: 'global_state',
   storage: createJSONStorage(() => localStorage),

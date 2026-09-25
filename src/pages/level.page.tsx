@@ -280,8 +280,8 @@ export function LevelPage() {
           </div>
         </div>
       </div>
-      <div className="w-full h-full p-6 flex text-xl">
-        <div className="flex flex-wrap justify-start items-center gap-8 w-[900px] pl-8">
+      <div className="w-full h-full p-6 flex">
+        <div className="h-fit flex flex-wrap justify-start items-center gap-16 pt-8 w-[900px] pl-8">
           {currentLevel?.words.map((props, key) => (
             <DashedWord key={key} {...props} />
           ))}
@@ -444,7 +444,9 @@ const StartingGameDialog = ({ dialogOpen, setDialogOpen, currentLevelNum, startG
 }
 
 const DashedWord = ({ word, tached }: WordItem) => {
-  const wordToRender = tached ? word : word.split("").map(() => "_ ").join(" ")
+  const debugMode = useGlobalState(s => s.debugMode);
+  const wordToRender = (debugMode || tached) ? word : word.split("").map(() => "_ ").join(" ");
+
   return (
     <div className="h-fit w-fit">
       <p>{wordToRender}</p>
