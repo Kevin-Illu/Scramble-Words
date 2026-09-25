@@ -3,7 +3,7 @@ import { gameLevels, getLevel, makeScramblePoolObjs, scramblePool, type LevelDat
 import { useGameTimer } from "@/hooks/gametimer";
 import { Dialog } from "@/ui/dialog.component";
 import { Button } from "@/ui/ui.component";
-import { ChevronLeft, House, Play, Undo2 } from "lucide-react";
+import { BetweenHorizontalStart, BookCheck, ChevronLeft, Delete, House, Pause, Play, RotateCcw, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
@@ -11,6 +11,26 @@ import { useLocation, useRoute } from "wouter";
 function validateParam(levelNum: string | number): boolean {
   const num = Number(levelNum)
   return !isNaN(num) && num >= FIRST_LEVEL && num < TOTAL_LEVELS
+}
+
+function calculateLevelProgress(levelData: LevelData) {
+  const totalWords = levelData.words.length;
+  const foundWords = levelData.words.filter(word => word.tached).length;
+
+  if (totalWords === 0) return 0;
+
+  return Math.round((foundWords / totalWords) * 100);
+};
+
+function checkIfPassed(level) {
+  const progress = calculateLevelProgress(level); // From the previous calculation
+  return progress >= PASSING_THRESHOLD;
+};
+
+
+function checkIfPassedWithOneHundredPercent(level) {
+  const progress = calculateLevelProgress(level);
+  return progress >= PASSING_CONDITION;
 }
 
 export function LevelPage() {
@@ -34,6 +54,7 @@ export function LevelPage() {
     const level = Number(params.num)
 
     setCurrentLevelNum(level)
+    startGame();
   }, [match, params!.num, navigate])
 
 
@@ -48,6 +69,7 @@ export function LevelPage() {
 
 
   const [dialogOpen, setDialogOpen] = useState(true);
+  const [dialogResultOpen, setDialogResultOpen] = useState(showStatus);
 
   const getStatus = () => {
     if (levelStatus === LEVEL_STATUS.passed) return "YOU WIN";
@@ -60,13 +82,11 @@ export function LevelPage() {
   })
   const [currentWord, setCurrentWord] = useState("")
   const handleTimeUp = () => {
-    completeCurrentLevel()
-
-    if (checkIfPassed()) {
-      setLevelStatus(LEVEL_STATUS.failed)
-    }
-
-    setShowStatus(true)
+    completeCurrentLevel();
+    const levelStatus = checkIfPassed(currentLevel) ? LEVEL_STATUS.passed : LEVEL_STATUS.failed;
+    setLevelStatus(levelStatus);
+    setShowStatus(true);
+    setDialogResultOpen(true);
   };
 
   const { formattedTime, startTimer, pauseTimer, resetTimer, isRunning } = useGameTimer(TIME, handleTimeUp)
@@ -159,25 +179,6 @@ export function LevelPage() {
     setCurrentWord("")
   }
 
-  const checkIfPassed = () => {
-    const progress = calculateLevelProgress(currentLevel); // From the previous calculation
-    return progress >= PASSING_THRESHOLD;
-  };
-
-  const checkIfPassedWithOneHundredPercent = () => {
-    const progress = calculateLevelProgress(currentLevel);
-    return progress >= PASSING_CONDITION;
-  }
-
-  const calculateLevelProgress = (levelData: LevelData) => {
-    const totalWords = levelData.words.length;
-    const foundWords = levelData.words.filter(word => word.tached).length;
-
-    if (totalWords === 0) return 0;
-
-    return Math.round((foundWords / totalWords) * 100);
-  };
-
   const resetAll = () => {
     resetTimer();
     setCurrentLevel(getLevel(currentLevelNum, gameLevels));
@@ -186,6 +187,7 @@ export function LevelPage() {
     setLevelStatus(LEVEL_STATUS.playing);
     startTimer();
     setShowStatus(false);
+    setDialogResultOpen(false);
   }
 
   const startGame = () => {
@@ -208,7 +210,7 @@ export function LevelPage() {
 
   // Stop timer and change the level state to complete
   useEffect(() => {
-    const levelCompleted = checkIfPassedWithOneHundredPercent()
+    const levelCompleted = checkIfPassedWithOneHundredPercent(currentLevel)
 
     if (isRunning && levelCompleted) {
       setShowStatus(true);
@@ -237,7 +239,7 @@ export function LevelPage() {
 
   return (
     <div className="z-1 w-screen h-screen px-16 pb-16 text-2xl level">
-      <div className="flex justify-between items-center gap-4 pt-6 text-white">
+      <div className="flex justify-between items-center gap-4 pt-1 text-white">
         <div className="min-w-200px">
           <span>Time: {formattedTime}</span>
         </div>
@@ -246,11 +248,20 @@ export function LevelPage() {
         </p>
 
         <div className="flex justify-between items-center gap-4">
+          <div>
+            <Button onClick={() => navigate("/levels")}>
+              <Undo2 size={26} />
+            </Button>
+          </div>
           <div className="min-w-200px">
             {isRunning ? (
-              <button disabled={showStatus} onClick={() => pauseTimer()}>PAUSE</button>
+              <Button variant="secondary" disabled={showStatus} onClick={() => pauseTimer()}>
+                <Pause size={26} />
+              </Button>
             ) : (
-              <button disabled={showStatus} onClick={() => startTimer()}>CONTINUE</button>
+              <Button variant="secondary" disabled={showStatus} onClick={() => startTimer()}>
+                <Play size={26} />
+              </Button>
             )}
           </div>
         </div>
@@ -273,51 +284,124 @@ export function LevelPage() {
               </div>
 
               <div className="flex gap-4 text-2xl">
-                <button onClick={handleWordFound} disabled={!isRunning || currentWord === ""}>ENTER</button>
-                <button onClick={handleRemoveLastLetter} disabled={!isRunning || currentWord === ""}>REMOVE</button>
-                <button onClick={() => handleScramblePool(false)} disabled={!isRunning}>SCRAMBLE</button>
+                <button className="cursor-pointer hover:text-white text-gray-300" onClick={handleWordFound} disabled={!isRunning || currentWord === ""}>
+                  <div className="flex gap-2 justify-center items-center">
+                    <p>ENTER</p> <BetweenHorizontalStart size={26} />
+                  </div>
+                </button>
+                <button className="cursor-pointer hover:text-white text-gray-300" onClick={handleRemoveLastLetter} disabled={!isRunning || currentWord === ""}>
+                  <div className="flex gap-2 justify-center items-center">
+                    <p>DELETE</p> <Delete size={26} />
+                  </div>
+                </button>
+                <button className="cursor-pointer hover:text-white text-gray-300" onClick={() => handleScramblePool(false)} disabled={!isRunning}>SCRAMBLE</button>
               </div>
             </div>
             <div className="gap-2 h-[200px] w-[400px] flex justify-center items-center">
               {poolObj?.map(({ letter, used, id }, key: number) => (
                 <div key={key}>
                   {!used ? (
-                    <button key={key} onClick={() => addLetter(letter, id)} disabled={!isRunning}>
+                    <button className="cursor-pointer" key={key} onClick={() => addLetter(letter, id)} disabled={!isRunning}>
                       <p className="">{letter}</p>
                     </button>
                   ) : <></>}
                 </div>
               ))}
             </div>
-
-
           </div>
-
-
         </div>
 
+        {/* TODO: the next level function is not working */}
+        <GameResultsDialog
+          restartLevel={resetAll}
+          nextLevel={() => navigate(`level/${currentLevelNum === TOTAL_LEVELS ? 1 : currentLevelNum}`)}
+          dialogOpen={dialogResultOpen}
+          setDialogOpen={setDialogResultOpen}
+          levelStatus={levelStatus}></GameResultsDialog>
+        <StartingGameDialog dialogOpen={dialogOpen} setDialogOpen={setDialogOpen} currentLevelNum={currentLevelNum} startGame={startGame} />
       </div>
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        title={`LEVEL ${currentLevelNum}`}
-        closeOnOutsideClick={false}
-        showCloseButton={false}
-      >
-        <div className="flex justify-center items-center gap-4">
-          <Button variant="secondary" onClick={() => navigate("/")}>
-          <House size={36} />
-          </Button>
-          <Button onClick={() => startGame()}>
-            <Play size={72} />
-          </Button>
-          <Button variant="secondary" onClick={() => navigate("/levels")}>
-            <Undo2 size={36} />
-          </Button>
-        </div>
-      </Dialog>
     </div>
   );
+}
+
+const GameResultsDialog = ({ dialogOpen, setDialogOpen, levelStatus, restartLevel, nextLevel }) => {
+  return (
+    <Dialog
+      open={dialogOpen}
+      onOpenChange={setDialogOpen}
+      title={levelStatus}
+    >
+      <div className="flex flex-col justify-center items-center gap-4 place-items-center">
+        <div className="flex justify-center items-center gap-4">
+          {levelStatus === LEVEL_STATUS.passed ? (
+            <Button onClick={() => nextLevel()}>
+              <div className="flex justify-center items-center gap-4">
+                <p>NEXT LEVEL</p>
+                <BookCheck size={26} />
+              </div>
+
+            </Button>
+          ) : (
+            <Button onClick={() => restartLevel()}>
+
+              <div className="flex justify-center items-center gap-4">
+                <p>PLAY AGAIN</p>
+                <RotateCcw size={26} />
+              </div>
+            </Button>
+          )}
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+
+const StartingGameDialog = ({ dialogOpen, setDialogOpen, currentLevelNum, startGame }) => {
+  const [, navigate] = useLocation();
+  return (
+    <Dialog
+      open={dialogOpen}
+      onOpenChange={setDialogOpen}
+      title={`LEVEL ${currentLevelNum}`}
+      closeOnOutsideClick={false}
+      showCloseButton={false}
+    >
+
+      <div className="flex flex-col justify-center items-center gap-4 place-items-center">
+        <div className="grid grid-cols-3 gap-4 text-center font-black">
+          <div>
+            <p className="text-gray-300 ">REQUIRED ACCURACY</p>
+            <div className="text-4xl">
+              MIN <span>70%</span>
+            </div>
+          </div>
+          <div className="text-center">
+            <p className="text-gray-300">GRADE REQUIRED</p>
+            <div className="text-8xl">
+              <p>A+</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-gray-300">TIME LIMIT</p>
+            <div className="text-4xl flex gap-4 items-center">
+              <p>03:00</p> <p className="text-lg text-gray-300">MIN</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-center items-center gap-4">
+          <Button variant="secondary" onClick={() => navigate("/")}>
+            <House size={26} />
+          </Button>
+          <Button onClick={() => startGame()}>
+            <Play size={26} />
+          </Button>
+          <Button variant="secondary" onClick={() => navigate("/levels")}>
+            <Undo2 size={26} />
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  )
 }
 
 const DashedWord = ({ word, tached }: WordItem) => {
