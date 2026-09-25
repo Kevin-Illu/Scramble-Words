@@ -1,9 +1,10 @@
 import { FIRST_LEVEL, LEVEL_STATUS, PASSING_CONDITION, PASSING_THRESHOLD, TIME, TOTAL_LEVELS, type LevelStatus } from "@/consts";
 import { gameLevels, getLevel, makeScramblePoolObjs, scramblePool, type LevelData, type WordItem } from "@/game/game-logic";
 import { useGameTimer } from "@/hooks/gametimer";
+import { ConfettiEffect } from "@/ui/confetti.component";
 import { Dialog } from "@/ui/dialog.component";
 import { Button } from "@/ui/ui.component";
-import { BetweenHorizontalStart, BookCheck, ChevronLeft, Delete, House, Pause, Play, RotateCcw, Undo2 } from "lucide-react";
+import { BetweenHorizontalStart, BookCheck, Delete, House, Pause, Play, RotateCcw, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
@@ -26,7 +27,6 @@ function checkIfPassed(level) {
   const progress = calculateLevelProgress(level); // From the previous calculation
   return progress >= PASSING_THRESHOLD;
 };
-
 
 function checkIfPassedWithOneHundredPercent(level) {
   const progress = calculateLevelProgress(level);
@@ -53,8 +53,9 @@ export function LevelPage() {
 
     const level = Number(params.num)
 
-    setCurrentLevelNum(level)
-    startGame();
+    setCurrentLevelNum(level);
+    resetAll(level);
+    setDialogOpen(true);
   }, [match, params!.num, navigate])
 
 
@@ -179,25 +180,39 @@ export function LevelPage() {
     setCurrentWord("")
   }
 
-  const resetAll = () => {
-    resetTimer();
-    setCurrentLevel(getLevel(currentLevelNum, gameLevels));
-    setCurrentWord("");
-    // handleScramblePool(true);
+  const resetAll = (levelNum: number | null = null) => {
     setLevelStatus(LEVEL_STATUS.playing);
-    startTimer();
+    resetTimer();
+    setCurrentLevel(getLevel(levelNum ?? currentLevelNum, gameLevels));
+    setCurrentWord("");
     setShowStatus(false);
     setDialogResultOpen(false);
   }
 
-  const startGame = () => {
+  const restartLevel = () => {
+    setLevelStatus(LEVEL_STATUS.playing);
     resetTimer();
+    setShowStatus(false)
+    setCurrentWord("")
+    setDialogResultOpen(false);
+    startTimer();
+  }
+
+  const startGame = () => {
+    setLevelStatus(LEVEL_STATUS.playing);
+    resetTimer();
+    setShowStatus(false)
+    setDialogOpen(false);
     setCurrentLevel(getLevel(currentLevelNum, gameLevels));
     setCurrentWord("");
-    setLevelStatus(LEVEL_STATUS.playing);
     startTimer();
-    setShowStatus(false);
-    setDialogOpen(false);
+  }
+
+  const nextLevel = () => {
+    const lvlArrLength = TOTAL_LEVELS - 1;
+    const nextLevel = currentLevelNum + 1;
+    const lvl = `/level/${currentLevelNum === lvlArrLength ? 1 : nextLevel}`
+    navigate(lvl)
   }
 
   useEffect(() => {
@@ -235,7 +250,6 @@ export function LevelPage() {
 
     // it should execute when the user assert a word
   }, [currentLevel]);
-
 
   return (
     <div className="z-1 w-screen h-screen px-16 pb-16 text-2xl level">
@@ -313,37 +327,55 @@ export function LevelPage() {
 
         {/* TODO: the next level function is not working */}
         <GameResultsDialog
-          restartLevel={resetAll}
-          nextLevel={() => navigate(`level/${currentLevelNum === TOTAL_LEVELS ? 1 : currentLevelNum}`)}
+          currentLevelNum={currentLevelNum}
+          restartLevel={restartLevel}
+          nextLevel={nextLevel}
           dialogOpen={dialogResultOpen}
           setDialogOpen={setDialogResultOpen}
           levelStatus={levelStatus}></GameResultsDialog>
-        <StartingGameDialog dialogOpen={dialogOpen} setDialogOpen={setDialogOpen} currentLevelNum={currentLevelNum} startGame={startGame} />
+        <StartingGameDialog
+          dialogOpen={dialogOpen}
+          setDialogOpen={setDialogOpen}
+          currentLevelNum={currentLevelNum}
+          startGame={startGame} />
       </div>
+      <ConfettiEffect
+        trigger={showStatus && (levelStatus === LEVEL_STATUS.passed)}
+        numberOfPieces={300}
+        duration={4000}
+      />
     </div>
   );
 }
 
-const GameResultsDialog = ({ dialogOpen, setDialogOpen, levelStatus, restartLevel, nextLevel }) => {
+const GameResultsDialog = ({ dialogOpen, setDialogOpen, levelStatus, restartLevel, nextLevel, currentLevelNum }) => {
   return (
     <Dialog
       open={dialogOpen}
       onOpenChange={setDialogOpen}
       title={levelStatus}
+      closeOnOutsideClick={false}
+      showCloseButton={false}
     >
       <div className="flex flex-col justify-center items-center gap-4 place-items-center">
         <div className="flex justify-center items-center gap-4">
           {levelStatus === LEVEL_STATUS.passed ? (
             <Button onClick={() => nextLevel()}>
               <div className="flex justify-center items-center gap-4">
-                <p>NEXT LEVEL</p>
+                {
+                  currentLevelNum === (TOTAL_LEVELS - 1)
+                    ? (
+                      <p>GO TO FIRST LEVEL</p>
+                    )
+                    : (
+                      <p>NEXT LEVEL</p>
+                    )
+                }
                 <BookCheck size={26} />
               </div>
-
             </Button>
           ) : (
             <Button onClick={() => restartLevel()}>
-
               <div className="flex justify-center items-center gap-4">
                 <p>PLAY AGAIN</p>
                 <RotateCcw size={26} />
@@ -366,7 +398,6 @@ const StartingGameDialog = ({ dialogOpen, setDialogOpen, currentLevelNum, startG
       closeOnOutsideClick={false}
       showCloseButton={false}
     >
-
       <div className="flex flex-col justify-center items-center gap-4 place-items-center">
         <div className="grid grid-cols-3 gap-4 text-center font-black">
           <div>
