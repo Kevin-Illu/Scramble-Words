@@ -1,9 +1,11 @@
+import bgImage from "@/assets/bully-background-game.png";
 import { FIRST_LEVEL, LEVEL_STATUS, PASSING_CONDITION, TIME, TOTAL_LEVELS, type LevelStatus } from "@/consts";
 import { gameLevels, getLevel, makeScramblePoolObjs, scramblePool, type LevelData, type WordItem } from "@/game/game-logic";
 import { useGameTimer } from "@/hooks/gametimer";
 import { useGlobalState } from "@/state/global.state";
 import { ConfettiEffect } from "@/ui/confetti.component";
 import { Dialog } from "@/ui/dialog.component";
+import { LoadingScreen } from "@/ui/loading-screen.component";
 import { Button } from "@/ui/ui.component";
 import { BetweenHorizontalStart, BookCheck, Delete, Home, House, Pause, Play, RotateCcw, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -35,6 +37,25 @@ function checkIfPassedWithOneHundredPercent(level: LevelData) {
 }
 
 export function LevelPage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLoadingProgress(prev => {
+        const next = prev + Math.floor(Math.random() * 25) + 10;
+        if (next >= 100) {
+          clearInterval(interval);
+          setTimeout(() => setIsLoading(false), 500);
+          return 100;
+        }
+        return next;
+      });
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const [match, params] = useRoute("/level/:num")
   const [, navigate] = useLocation()
 
@@ -254,6 +275,11 @@ export function LevelPage() {
 
   return (
     <div className="z-1 w-screen h-screen px-16 pb-16 text-2xl level">
+      <LoadingScreen
+        isLoading={isLoading}
+        progress={loadingProgress}
+        backgroundImage={bgImage}
+      />
       <div className="flex justify-between items-center gap-4 pt-1 text-white">
         <div className="min-w-200px">
           <span>Time: {formattedTime}</span>
