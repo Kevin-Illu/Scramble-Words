@@ -8,6 +8,11 @@ declare module "*.svg" {
   export = path;
 }
 
+declare module "*.png" {
+  const path: string;
+  export = path;
+}
+
 declare module "*.css" {}
 
 declare module "*.module.css" {

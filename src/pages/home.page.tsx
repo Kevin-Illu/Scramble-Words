@@ -1,6 +1,8 @@
+import bgImage from "@/assets/background-home-and-select-levels.png";
 import { DIFFICULTY, type Difficulty } from "@/consts";
 import { useGlobalState } from "@/state/global.state";
 import { DifficultySelectorCard } from "@/ui/difficulty-selector.component";
+import { LoadingScreen } from "@/ui/loading-screen.component";
 import { MenuContainer } from "@/ui/ui.component";
 import { Crown, Flame, Shield, University, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -8,6 +10,26 @@ import { useLocation } from "wouter";
 import { useShallow } from "zustand/shallow";
 
 export function HomePage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        const next = prev + Math.floor(Math.random() * 25) + 10;
+        if (next >= 100) {
+          clearInterval(interval);
+          setTimeout(() => setIsLoading(false), 500);
+          return 100;
+        }
+        return next;
+      });
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, []);
+
+
   const [, navigate] = useLocation();
   const { updatePassingThreshold, selectedDifficulty } = useGlobalState(useShallow((s) => ({
     updatePassingThreshold: s.updatePassingThreshold,
@@ -64,6 +86,11 @@ export function HomePage() {
 
   return (
     <div className="home w-screen h-screen text-white">
+      <LoadingScreen
+        isLoading={isLoading}
+        progress={progress}
+        backgroundImage={bgImage}
+      />
       <div className="w-full h-full gap-8 flex flex-col justify-center items-center">
         <div>
           <MenuContainer
